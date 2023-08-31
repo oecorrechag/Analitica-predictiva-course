@@ -20,4 +20,4 @@ data_list = [("a","e","h","A"),
              ("d","g","j","A")
             ]
 list_name = ["x1","x2","x3","y"]
-data = pd.DataFrame(data_list, columns=list_name)
+df = pd.DataFrame(data_list, columns=list_name)

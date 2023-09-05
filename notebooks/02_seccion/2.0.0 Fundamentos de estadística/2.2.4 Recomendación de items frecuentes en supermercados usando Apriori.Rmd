@@ -1,0 +1,198 @@
+---
+title: '2.2.4 Recomendación de items frecuentes en supermercados usando Apriori'
+output:
+  html_notebook: default
+---
+
+```{r}
+library(arules)
+
+source("paths.R")
+```
+
+```{r}
+modality = 'u'
+project = 'Analitica predictiva'
+
+data <- make_dir_line(modality, project)
+raw <- data("raw")
+models <- data("models")
+
+```
+
+
+
+### Lectura de las transacciones
+
+```{r}
+groceries <- read.transactions(file.path(raw, "groceries.csv"),
+    sep = ","
+)
+```
+
+### Análisis exploratorio
+
+```{r}
+##
+## Se obtiene la información más relevante de los datos. Los
+## resultados indican lo siguiente:
+##
+##   * Hay 9.835 transacciones con 169 items (ok!)
+##
+##   * Los productos más vendidos son:
+##
+##       producto          transacciones en
+##                         las que aparece
+##       ------------------------------------
+##       whole milk        2.513
+##       other vegetables  1.903
+##       ...
+##
+##  * Hay 2.159 transacciones con 1 ítem, 1.643 con 2 ítems, ...,
+##    hay una sola transacción con 32 ítems
+##
+##
+summary(groceries)
+```
+
+La segunda parte de la tabla anterior indica la cantidad de transacciones que tienen un solo item, luego dos y así sucesivamente.
+
+```{r}
+##
+## Se visualizan los items comprados en las primeras
+## cinco transacciones (filas del archivo)
+##
+inspect(groceries[1:5])
+```
+
+```{r}
+##
+## Se imprime la frequencia con que se compraron los primeros
+## tres items (note que esta organizado alfabeticamente)
+##
+itemFrequency(groceries[, 1:3])
+```
+
+```{r}
+##
+## Se grafica un histograma que muestra la frecuencia
+## con que se compraron ciertos items. El parámetro
+## `support`  corresponde a la frecuencia mínima que
+## deben tener un item para que sea incluído en la gráfica.
+## En este caso un item debe aparecer en 0.1 * 9385 = 938.5
+## transacciones para ser tenido en cuenta.
+##
+itemFrequencyPlot(groceries, support = 0.1)
+```
+### Construcción del sistema de reglas de asociación
+
+```{r}
+##
+## Se obtiene la misma gráfica anterior pero para los
+## 20 items más comprados.
+##
+itemFrequencyPlot(groceries, topN = 20)
+```
+
+```{r}
+##
+## Se puede visualizar la matriz de items
+## y transacciones para una muestra aleatoria.
+## Una linea vertical muestra items que podrían ser
+## comprados en cada transacción
+##
+image(sample(groceries, 100))
+```
+
+### Construcción del modelo
+
+```{r}
+##
+## La corrida con los parámetros por defecto de la
+## función no generan reglas para los datos suministrados.
+## El valor por defecto de support es 0.1, es decir,
+## un item debe aparecer en un mínimo de 938.5 transacciones
+## para ser considerado
+##
+apriori(groceries)
+```
+
+```{r}
+##
+## El parámetro confianza representa el porcentaje mínimo
+## de veces que una regla debe ser correcta para que
+## sea considerada; esto permite eliminar reglas sin
+## sentido. El parámetro minlen indica que las reglas
+## deben contener al menos 2 items.
+##
+groceryrules <- apriori(groceries,
+                        parameter = list(support = 0.006,
+                                         confidence = 0.25,
+                                         minlen = 2))
+```
+
+```{r}
+##
+## Número de reglas generadas
+##
+groceryrules
+```
+
+### Evaluación del modelo
+
+```{r}
+##
+## Se obtiene la cantidad  de reglas, la cantidad
+## de elementos por regla, y el resumen de las
+## métricas de calidad
+##
+summary(groceryrules)
+```
+
+```{r}
+##
+## Se visualizan las primeras 10 reglas.
+##
+inspect(groceryrules[1:10])
+```
+
+
+```{r}
+##
+## Se puede inspeccionar un conjunto de reglas en particular
+##
+inspect(sort(groceryrules, by = "lift")[1:5])
+```
+
+
+```{r}
+##
+## Se puede obtener un subconjunto de las reglas que
+## cumplen una condición particular
+##
+berryrules <- subset(groceryrules, items %in% "berries")
+inspect(berryrules)
+```
+
+```{r}
+##
+## Se pueden almacenar las reglas en el disco
+##
+write(groceryrules,
+      file = file.path(models, "groceryrules.csv"),
+      sep = ",",
+      quote = TRUE,
+      row.names = FALSE)
+```
+
+
+```{r}
+##
+## Se pueden convertir a un data.frame
+##
+groceryrules_df <- as(groceryrules, "data.frame")
+str(groceryrules_df)
+```
+```{r}
+print('Ok_')
+```

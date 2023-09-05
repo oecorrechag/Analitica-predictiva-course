@@ -8,40 +8,126 @@ output:
 library(arules)
 ```
 
-Una de las aplicaciones directas del concepto de probabilidad como frecuencia es la construcción de sistemas de recomendación basados en que ítems siempre van juntos. Este tipo de sistema de recomendación es diferente de aquellos que buscan clientes con comportamientos similares para realizar la recomendación de productos. En términos más generales, este tipo de sistemas permite obtener los conjuntos de ítems que los clientes suelen seleccionar. En este tutorial se discute el algoritmo Apriori para la construcción de reglas de asociación entre ítems.
-
-### Descripción del problema
-
-Un problema típico de los retailers es poder recomendar productos afines a sus compradores basados en el histórico general de las ventas. Estas recomendaciones tienen como fin sugerirle al usuario productos que podría haber olvidado y que usualmente se llevan juntos, o nuevos productos sustitutos que reemplazarían productos ya posicionados. Esta recomendación se basa en el histórico general de la tienda (productos que todas las personas usualmente llevan juntos) y no en las preferencias individuales de los clientes.
-
-Para ejemplificar el proceso de construcción de las reglas de inducción, se tiene un conjunto ficticio de 10 transacciones realizadas sobre seis posibles ítems (x1,...,x6), donde cada fila representa una transacción:
- 
- # | Productos
----|---|---|---|-----
- 1 | x1| x2| x3|
- 2 | x1| x3|   |
- 3 | x2| x4|   |
- 4 | x1| x2| x3|
- 5 | x1| x2| x5|
- 6 | x1| x2| x3| x4
- 7 | x4| x6|   |
- 8 | x1| x2| x4| x6
- 9 | x1| x3| x4|
-10 | x1| x2| x3|
-
-El problema consiste en derivar un conjunto de reglas de asociación que permita recomenda un grupo de productos a partir de los productos que ya seleccionó el cliente. Por ejemplo, si un cliente compra x1 y x3, ¿qué producto o productos se le deben recomendar?
-
-### Transacción
-
-Una transacción se representa a través del conjunto de ítems comprados en ella. Así, una transacción con cuatro ítems se representa como:
-
-{x1,x2,x3,x4}
-
-El problema descrito equivale a determinar los productos xi, con xi∉{x1,x2,x3,x4}, con mayor probabilidad de ser comprados sabiendo que el cliente ya seleccionó x1, x2, x3 y x4. Dicho de otra forma, se deben computar las probabilidades condicionales Pr(xi|x1,x2,x3,x4) y recomendar los N  productos xi  con mayor probabilidad condicional de compra. En este problema se asume que SI existe una dependencia entre la compra de un producto y otro; si esta dependencia no existe, no tiene sentido construir el sistema de recomendación.
+### Lectura de las transacciones
 
 ```{r}
-
-
-
+transactions <- read.transactions("data.csv", sep = ",")
+inspect(transactions)
 ```
 
+### Análisis exploratorio
+
+```{r}
+##
+## Se obtiene la información más relevante de los datos:
+##
+##    * Número de transacciones
+##    * Número total de ítems
+##    * Número de transacciones por cantidad de ítems (y cuartiles)
+##
+summary(transactions)
+```
+
+```{r}
+##
+## Se imprime la frequencia de compra, es decir,
+## la frecuencia de cada ítem en el total de trasacciones
+##
+itemFrequency(transactions)
+```
+
+```{r}
+##
+## Se grafica un histograma que muestra la frecuencia
+## con que se compraron ciertos items. El parámetro
+## `support`  corresponde a la frecuencia mínima que
+## deben tener un item para que sea incluído en la gráfica.
+## En este caso un item debe aparecer en 0.2 * 10 = 2
+## transacciones para ser tenido en cuenta. Nóte que no
+## aparece x5.
+##
+options(repr.plot.width = 3, repr.plot.height = 2)
+itemFrequencyPlot(transactions, support = 0.2)
+```
+
+```{r}
+##
+## Se obtiene la misma gráfica anterior
+## pero para los ítems más comprados.
+## La gráfica muestra que x1 es el más comprado
+## y x5 el menos comprado
+##
+options(repr.plot.width = 3, repr.plot.height = 2)
+itemFrequencyPlot(transactions, topN = 6)
+```
+### Construcción del sistema de reglas de asociación
+
+```{r}
+##
+## La corrida con los parámetros por defecto de la
+## función no generan reglas para los datos suministrados.
+## El valor por defecto de support es 0.1, es decir,
+## un item debe aparecer en un mínimo de 1 transacciones
+## para ser considerado.
+##
+apriori(transactions)
+```
+
+```{r}
+##
+## El parámetro confianza representa el porcentaje mínimo
+## de veces que una regla debe ser correcta para que
+## sea considerada; esto permite eliminar reglas sin
+## sentido. El parámetro minlen indica que las reglas
+## deben contener al menos 2 items.
+##
+transactionsrules <- apriori(transactions,
+                        parameter = list(support = 0.006,
+                                         confidence = 0.25,
+                                         minlen = 2))
+```
+
+```{r}
+##
+## Número de reglas generadas.
+## Se generaron 48 reglas
+##
+transactionsrules
+```
+
+```{r}
+##
+## Se imprime un resumen de las reglas generadas.
+##
+##   * Hay 18 reglas con 2 ítems, 22 reglas con 3 ítems
+##     y así sucesivamente.
+##
+##   * Luego se imprimen los estadísticos para la cantidad
+##     de reglas por ítem
+##
+##   * Seguidamente aparece el resumen de las métricas de
+##     las reglas de asociación
+##
+summary(transactionsrules)
+```
+
+```{r}
+##
+## Visualización de todas las reglas.
+##
+inspect(transactionsrules)
+```
+```{r}
+##
+## Se puede inspeccionar un conjunto de reglas en particular
+##
+inspect(sort(transactionsrules, by = "lift")[1:5])
+```
+```{r}
+##
+## Se puede obtener un subconjunto de las reglas que
+## cumplen una condición particular
+##
+berryrules <- subset(transactionsrules, items %in% "x2")
+inspect(transactionsrules)
+```

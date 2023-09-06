@@ -7,7 +7,7 @@ output:
 ```{r}
 library(arules)
 
-source("paths.R")
+source("../../../utils/paths.R")
 ```
 
 ```{r}

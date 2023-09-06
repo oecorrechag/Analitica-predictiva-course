@@ -6,12 +6,23 @@ output:
 
 ```{r}
 library(arules)
+
+source("../../../utils/paths.R")
 ```
+
+```{r}
+modality = 'u'
+project = 'Analitica predictiva'
+
+data <- make_dir_line(modality, project)
+raw <- data("raw")
+```
+
 
 ### Lectura de las transacciones
 
 ```{r}
-transactions <- read.transactions("data.csv", sep = ",")
+transactions <- read.transactions(file.path(raw, "data_items.csv"), sep = ",")
 inspect(transactions)
 ```
 
